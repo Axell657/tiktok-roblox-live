@@ -7,6 +7,10 @@ app.use(express.json())
 
 const servers = {}
 
+const API_KEY = process.env.EULER_API_KEY
+
+console.log("API KEY:", API_KEY ? "CARGADA" : "NO ENCONTRADA")
+
 function makeServer(serverId) {
 
     if (!servers[serverId]) {
@@ -50,7 +54,11 @@ async function connectTikTok(serverId, username) {
     server.connected = false
     server.lastError = ""
 
-    const connection = new WebcastPushConnection(username)
+    console.log("Intentando conectar:", username)
+
+    const connection = new WebcastPushConnection(username, {
+        apiKey: API_KEY
+    })
 
     server.connection = connection
 
@@ -61,7 +69,7 @@ async function connectTikTok(serverId, username) {
         server.connected = true
         server.lastError = ""
 
-        console.log(`Conectado a @${state.uniqueId}`)
+        console.log(`✅ Conectado a @${state.uniqueId}`)
 
         connection.on('chat', data => {
 
@@ -98,10 +106,11 @@ async function connectTikTok(serverId, username) {
     } catch (err) {
 
         server.connected = false
+
         server.lastError =
             err.message || "Error desconocido"
 
-        console.log("ERROR:", server.lastError)
+        console.log("❌ ERROR:", server.lastError)
 
         return {
             ok: false,
@@ -198,5 +207,5 @@ const PORT = process.env.PORT || 3000
 
 app.listen(PORT, ()=>{
 
-    console.log("Servidor iniciado")
+    console.log("🔥 Servidor iniciado")
 })
