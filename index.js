@@ -11,16 +11,16 @@ function makeServer(serverId) {
         servers[serverId] = {
             latestData: "",
             currentTikTokUsername: "",
-            connection: null
+            connection: null,
+            connected: false,
+            lastError: ""
         }
     }
-
     return servers[serverId]
 }
 
 function setLatest(serverId, username, gift, coins = 0) {
     const server = makeServer(serverId)
-
     server.latestData = JSON.stringify({
         username,
         gift,
@@ -32,34 +32,51 @@ function setLatest(serverId, username, gift, coins = 0) {
 async function connectTikTok(serverId, username) {
     const server = makeServer(serverId)
 
-    server.currentTikTokUsername = username
-
     if (server.connection) {
-        try {
-            server.connection.disconnect()
-        } catch(e){}
+        try { server.connection.disconnect() } catch(e) {}
     }
+
+    server.currentTikTokUsername = username
+    server.connected = false
+    server.lastError = ""
 
     const connection = new WebcastPushConnection(username)
     server.connection = connection
 
-    connection.connect()
-    .then(state => {
-        console.log(`Servidor ${serverId} conectado al live de ${state.uniqueId}`)
-    })
-    .catch(err => {
-        console.log(`Error en servidor ${serverId}:`, err.message)
-    })
+    try {
+        const state = await connection.connect()
 
-    connection.on('chat', data => {
-        setLatest(serverId, data.comment, false, 0)
-    })
+        server.connected = true
+        server.lastError = ""
 
-    connection.on('gift', data => {
-        if (data.comment) {
-            setLatest(serverId, data.comment, true, data.diamondCount || 1)
+        console.log(`Server ${serverId} conectado a ${state.uniqueId}`)
+
+        connection.on('chat', data => {
+            setLatest(serverId, data.comment, false, 0)
+        })
+
+        connection.on('gift', data => {
+            if (data.comment) {
+                setLatest(serverId, data.comment, true, data.diamondCount || 1)
+            }
+        })
+
+        return {
+            ok: true,
+            message: `✅ Conectado a @${username}`
         }
-    })
+
+    } catch (err) {
+        server.connected = false
+        server.lastError = err.message || "Error desconocido"
+
+        console.log(`Error conectando ${username}:`, server.lastError)
+
+        return {
+            ok: false,
+            message: `❌ No se pudo conectar a @${username}: ${server.lastError}`
+        }
+    }
 }
 
 app.get('/', (req,res)=>{
@@ -76,20 +93,20 @@ app.get('/connect/:serverId/:username', async (req,res)=>{
     const username = req.params.username.replace("@","").trim()
 
     if (!username) {
-        return res.send("Usuario inválido")
+        return res.send("❌ Usuario inválido")
     }
 
-    await connectTikTok(serverId, username)
-
-    res.send(`Server ${serverId} conectando a ${username}`)
+    const result = await connectTikTok(serverId, username)
+    res.send(result.message)
 })
 
 app.get('/status/:serverId', (req,res)=>{
     const server = makeServer(req.params.serverId)
 
     res.json({
-        online: true,
-        tiktokUsername: server.currentTikTokUsername
+        connected: server.connected,
+        tiktokUsername: server.currentTikTokUsername,
+        lastError: server.lastError
     })
 })
 
