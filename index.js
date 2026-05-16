@@ -2,12 +2,15 @@ const { WebcastPushConnection } = require('tiktok-live-connector')
 const express = require('express')
 
 const app = express()
+
 app.use(express.json())
 
 const servers = {}
 
 function makeServer(serverId) {
+
     if (!servers[serverId]) {
+
         servers[serverId] = {
             latestData: "",
             currentTikTokUsername: "",
@@ -16,11 +19,14 @@ function makeServer(serverId) {
             lastError: ""
         }
     }
+
     return servers[serverId]
 }
 
 function setLatest(serverId, username, gift, coins = 0) {
+
     const server = makeServer(serverId)
+
     server.latestData = JSON.stringify({
         username,
         gift,
@@ -30,10 +36,14 @@ function setLatest(serverId, username, gift, coins = 0) {
 }
 
 async function connectTikTok(serverId, username) {
+
     const server = makeServer(serverId)
 
     if (server.connection) {
-        try { server.connection.disconnect() } catch(e) {}
+
+        try {
+            server.connection.disconnect()
+        } catch(e) {}
     }
 
     server.currentTikTokUsername = username
@@ -41,23 +51,42 @@ async function connectTikTok(serverId, username) {
     server.lastError = ""
 
     const connection = new WebcastPushConnection(username)
+
     server.connection = connection
 
     try {
+
         const state = await connection.connect()
 
         server.connected = true
         server.lastError = ""
 
-        console.log(`Server ${serverId} conectado a ${state.uniqueId}`)
+        console.log(`Conectado a @${state.uniqueId}`)
 
         connection.on('chat', data => {
-            setLatest(serverId, data.comment, false, 0)
+
+            console.log("Comentario:", data.comment)
+
+            setLatest(
+                serverId,
+                data.comment,
+                false,
+                0
+            )
         })
 
         connection.on('gift', data => {
+
+            console.log("Gift recibido")
+
             if (data.comment) {
-                setLatest(serverId, data.comment, true, data.diamondCount || 1)
+
+                setLatest(
+                    serverId,
+                    data.comment,
+                    true,
+                    data.diamondCount || 1
+                )
             }
         })
 
@@ -67,41 +96,60 @@ async function connectTikTok(serverId, username) {
         }
 
     } catch (err) {
-        server.connected = false
-        server.lastError = err.message || "Error desconocido"
 
-        console.log(`Error conectando ${username}:`, server.lastError)
+        server.connected = false
+        server.lastError =
+            err.message || "Error desconocido"
+
+        console.log("ERROR:", server.lastError)
 
         return {
             ok: false,
-            message: `❌ No se pudo conectar a @${username}: ${server.lastError}`
+            message:
+                `❌ No se pudo conectar a @${username}: ${server.lastError}`
         }
     }
 }
 
 app.get('/', (req,res)=>{
+
     res.send("TikTok Roblox Server ON")
 })
 
 app.get('/latest/:serverId', (req,res)=>{
-    const server = makeServer(req.params.serverId)
+
+    const server =
+        makeServer(req.params.serverId)
+
     res.send(server.latestData)
 })
 
 app.get('/connect/:serverId/:username', async (req,res)=>{
+
     const serverId = req.params.serverId
-    const username = req.params.username.replace("@","").trim()
+
+    const username =
+        req.params.username
+        .replace("@","")
+        .trim()
 
     if (!username) {
-        return res.send("❌ Usuario inválido")
+
+        return res.send(
+            "❌ Usuario inválido"
+        )
     }
 
-    const result = await connectTikTok(serverId, username)
+    const result =
+        await connectTikTok(serverId, username)
+
     res.send(result.message)
 })
 
 app.get('/status/:serverId', (req,res)=>{
-    const server = makeServer(req.params.serverId)
+
+    const server =
+        makeServer(req.params.serverId)
 
     res.json({
         connected: server.connected,
@@ -111,22 +159,44 @@ app.get('/status/:serverId', (req,res)=>{
 })
 
 app.get('/test/:serverId', (req,res)=>{
-    setLatest(req.params.serverId, "Builderman", false, 0)
+
+    setLatest(
+        req.params.serverId,
+        "Builderman",
+        false,
+        0
+    )
+
     res.send("spawned")
 })
 
 app.get('/gift/:serverId', (req,res)=>{
-    setLatest(req.params.serverId, "Roblox", true, 1)
+
+    setLatest(
+        req.params.serverId,
+        "Roblox",
+        true,
+        1
+    )
+
     res.send("gift spawned")
 })
 
 app.get('/biggift/:serverId', (req,res)=>{
-    setLatest(req.params.serverId, "Builderman", true, 50)
+
+    setLatest(
+        req.params.serverId,
+        "Builderman",
+        true,
+        50
+    )
+
     res.send("big gift spawned")
 })
 
 const PORT = process.env.PORT || 3000
 
 app.listen(PORT, ()=>{
+
     console.log("Servidor iniciado")
 })
