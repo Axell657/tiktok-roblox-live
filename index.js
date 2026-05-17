@@ -50,7 +50,7 @@ async function connectTikTok(serverId, username) {
     server.connected = false
     server.lastError = ""
 
-    console.log("Conectando a:", username)
+    console.log("🔥 Intentando conectar:", username)
 
     const connection = new WebcastPushConnection(username)
 
@@ -58,16 +58,16 @@ async function connectTikTok(serverId, username) {
 
     try {
 
-        const state = await connection.connect()
+        await connection.connect()
 
         server.connected = true
         server.lastError = ""
 
-        console.log(`✅ Conectado a @${state.uniqueId}`)
+        console.log(`✅ Conectado a @${username}`)
 
         connection.on('chat', data => {
 
-            console.log("Comentario:", data.comment)
+            console.log("💬 Comentario:", data.comment)
 
             setLatest(
                 serverId,
@@ -79,17 +79,14 @@ async function connectTikTok(serverId, username) {
 
         connection.on('gift', data => {
 
-            console.log("Gift recibido")
+            console.log("🎁 Gift recibido")
 
-            if (data.comment) {
-
-                setLatest(
-                    serverId,
-                    data.comment,
-                    true,
-                    data.diamondCount || 1
-                )
-            }
+            setLatest(
+                serverId,
+                data.uniqueId || "TikTok",
+                true,
+                data.diamondCount || 1
+            )
         })
 
         return {
