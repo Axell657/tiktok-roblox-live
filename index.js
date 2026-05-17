@@ -52,7 +52,12 @@ async function connectTikTok(serverId, username) {
 
     console.log("🔥 Intentando conectar:", username)
 
-    const connection = new WebcastPushConnection(username)
+    const connection = new WebcastPushConnection(username, {
+        processInitialData: false,
+        enableExtendedGiftInfo: false,
+        enableWebsocketUpgrade: false,
+        requestPollingIntervalMs: 2000
+    })
 
     server.connection = connection
 
