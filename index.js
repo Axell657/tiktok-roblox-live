@@ -7,10 +7,6 @@ app.use(express.json())
 
 const servers = {}
 
-const API_KEY = process.env.EULER_API_KEY
-
-console.log("API KEY:", API_KEY ? "CARGADA" : "NO ENCONTRADA")
-
 function makeServer(serverId) {
 
     if (!servers[serverId]) {
@@ -54,11 +50,9 @@ async function connectTikTok(serverId, username) {
     server.connected = false
     server.lastError = ""
 
-    console.log("Intentando conectar:", username)
+    console.log("Conectando a:", username)
 
-    const connection = new WebcastPushConnection(username, {
-        apiKey: API_KEY
-    })
+    const connection = new WebcastPushConnection(username)
 
     server.connection = connection
 
@@ -153,18 +147,6 @@ app.get('/connect/:serverId/:username', async (req,res)=>{
         await connectTikTok(serverId, username)
 
     res.send(result.message)
-})
-
-app.get('/status/:serverId', (req,res)=>{
-
-    const server =
-        makeServer(req.params.serverId)
-
-    res.json({
-        connected: server.connected,
-        tiktokUsername: server.currentTikTokUsername,
-        lastError: server.lastError
-    })
 })
 
 app.get('/test/:serverId', (req,res)=>{
